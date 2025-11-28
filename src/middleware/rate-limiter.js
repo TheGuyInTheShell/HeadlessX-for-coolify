@@ -90,83 +90,61 @@ class EnhancedRateLimiter {
      */
     createIntelligentLimiter(type = 'api') {
         const config = this.configs[type];
-        
-        return rateLimit({
-            ...config,
-            
-            // Custom key generator with IP and user agent consideration
-            keyGenerator: (req) => {
-                const ip = this.getClientIP(req);
-                const userAgent = req.get('User-Agent') || 'unknown';
-                const userAgentHash = this.hashString(userAgent).substring(0, 8);
-                
-                return `${ip}_${userAgentHash}`;
-            },
-            
-            // Custom skip function for whitelisted IPs and legitimate requests
-            skip: (req) => {
-                const ip = this.getClientIP(req);
-                
-                // Skip rate limiting for whitelisted IPs
-                if (this.whitelistedIPs.has(ip)) {
-                    return true;
-                }
-                
-                // Skip for health check requests
-                if (req.path === '/api/health') {
-                    return true;
-                }
-                
-                // Skip for requests with valid authorization
-                if (this.isAuthorizedRequest(req)) {
-                    return true;
-                }
-                
-                return false;
-            },
-            
-            // Enhanced request handler with logging
-            handler: (req, res) => {
-                const ip = this.getClientIP(req);
-                const userAgent = req.get('User-Agent');
-                
-                // Log rate limit violation
-                this.logger.warn('Rate limit exceeded', {
-                    ip,
-                    userAgent,
-                    path: req.path,
-                    method: req.method,
-                    type
-                });
-                
-                // Track suspicious activity
-                this.trackSuspiciousActivity(ip, req);
-                
-                // Send structured error response
-                const error = new HeadlessXError(
-                    `Rate limit exceeded: ${config.message.error}`,
-                    429,
-                    ERROR_CATEGORIES.RATE_LIMIT,
-                    {
-                        retryAfter: config.message.retryAfter,
-                        limit: config.max,
-                        windowMs: config.windowMs,
-                        type
-                    }
-                );
-                
-                res.status(429).json({
-                    error: error.message,
-                    code: error.code,
-                    category: error.category,
-                    retryAfter: config.message.retryAfter,
-                    timestamp: new Date().toISOString()
-                });
-            },
-            
-            // On limit reached callback for monitoring
-            onLimitReached: (req) => {
-                const ip = this.getClientIP(req);
+
+        // Get max
+        const { max, ...baseConfig } = config;
+
+         return rateLimit({
+        // Config base (windowMs, headers, message, etc.)
+        ...baseConfig,
+
+        // v7+ `limit` with `max`
+        limit: typeof max === 'number' ? max : undefined,
+
+        // Custom key generator with IP and user agent consideration
+        keyGenerator: (req) => {
+            const ip = this.getClientIP(req);
+            const userAgent = req.get('User-Agent') || 'unknown';
+            const userAgentHash = this.hashString(userAgent).substring(0, 8);
+
+            return `${ip}_${userAgentHash}`;
+        },
+
+        // Custom skip function for whitelisted IPs and legitimate requests
+        skip: (req) => {
+            const ip = this.getClientIP(req);
+
+            // Skip rate limiting for whitelisted IPs
+            if (this.whitelistedIPs.has(ip)) {
+                return true;
+            }
+
+            // Skip for health check requests
+            if (req.path === '/api/health') {
+                return true;
+            }
+
+            // Skip for requests with valid authorization
+            if (this.isAuthorizedRequest(req)) {
+                return true;
+            }
+
+            return false;
+        },
+
+        // Enhanced request handler with logging
+        // (aquí emulamos el antiguo onLimitReached)
+        handler: (req, res, _next, options) => {
+            const ip = this.getClientIP(req);
+            const userAgent = req.get('User-Agent') || 'unknown';
+
+            // --- Emular onLimitReached SOLO en el primer request bloqueado ---
+            if (
+                req.rateLimit &&
+                typeof req.rateLimit.current === 'number' &&
+                typeof req.rateLimit.limit === 'number' &&
+                req.rateLimit.current === req.rateLimit.limit + 1
+            ) {
                 this.logger.info('Rate limit threshold reached', {
                     ip,
                     path: req.path,
@@ -174,7 +152,48 @@ class EnhancedRateLimiter {
                     timestamp: new Date().toISOString()
                 });
             }
-        });
+
+            // Log rate limit violation
+            this.logger.warn('Rate limit exceeded', {
+                ip,
+                userAgent,
+                path: req.path,
+                method: req.method,
+                type
+            });
+
+            // Track suspicious activity
+            this.trackSuspiciousActivity(ip, req);
+
+            const effectiveLimit =
+                (req.rateLimit && req.rateLimit.limit) !== undefined
+                    ? req.rateLimit.limit
+                    : max;
+
+            // Structured error response
+            const error = new HeadlessXError(
+                `Rate limit exceeded: ${config.message.error}`,
+                options?.statusCode ?? 429,
+                ERROR_CATEGORIES.RATE_LIMIT,
+                {
+                    retryAfter: config.message.retryAfter,
+                    limit: effectiveLimit,
+                    windowMs: config.windowMs,
+                    type
+                }
+            );
+
+            res.status(options?.statusCode ?? 429).json({
+                error: error.message,
+                code: error.code,
+                category: error.category,
+                retryAfter: config.message.retryAfter,
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // ❌ delete onLimitReached
+    });
     }
 
     /**
