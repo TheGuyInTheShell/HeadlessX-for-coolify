@@ -7,6 +7,7 @@ const browserService = require('../services/browser');
 const MouseMovement = require('../services/behavioral/mouse-movement');
 const KeyboardDynamics = require('../services/behavioral/keyboard-dynamics');
 const StealthService = require('../services/stealth');
+const FingerprintManager = require('../config/fingerprints');
 const WAFBypass = require('../services/evasion/waf-bypass');
 const { AntiBotService } = require('../services/antibot');
 const { logger } = require('../utils/logger');
@@ -18,6 +19,7 @@ class AuthInteractionController {
         this.keyboardDynamics = new KeyboardDynamics();
         this.wafBypass = new WAFBypass();
         this.antiBotService = new AntiBotService();
+        this.fingerprintManager = new FingerprintManager();
 
         // Bind methods
         this.loginWithNaturalInteraction = this.loginWithNaturalInteraction.bind(this);
@@ -30,7 +32,9 @@ class AuthInteractionController {
      */
     async loginWithNaturalInteraction(req, res) {
         const requestId = req.requestId || 'req-' + Date.now();
-        const { url } = req.query;
+
+        // Support URL from body (priority) or query parameters
+        const url = req.body.url || req.query.url;
         const { username, password } = req.body;
 
         if (!url) {
@@ -47,49 +51,128 @@ class AuthInteractionController {
             });
         }
 
+        // Extract v1.3.0 options from request body
+        const options = {
+            ...req.body,
+            // Anti-detection defaults
+            deviceProfile: req.body.deviceProfile || 'mid-range-desktop',
+            geoProfile: req.body.geoProfile || 'us-east',
+            behaviorProfile: req.body.behaviorProfile || 'natural',
+            enableCanvasSpoofing: req.body.enableCanvasSpoofing !== false,
+            enableWebGLSpoofing: req.body.enableWebGLSpoofing !== false,
+            enableAudioSpoofing: req.body.enableAudioSpoofing !== false,
+            enableWebRTCBlocking: req.body.enableWebRTCBlocking !== false,
+            enableAdvancedStealth: req.body.enableAdvancedStealth !== false,
+
+            // Behavioral defaults
+            simulateMouseMovement: req.body.simulateMouseMovement !== false,
+            simulateTyping: req.body.simulateTyping !== false,
+            randomizeTimings: req.body.randomizeTimings !== false,
+            humanDelays: req.body.humanDelays !== false,
+
+            // Timeout defaults
+            timeout: req.body.timeout || 60000,
+            extraWaitTime: req.body.extraWaitTime || 5000
+        };
+
         let context = null;
         let page = null;
+        let browser = null;
 
         try {
             logger.info(requestId, `Starting natural login flow for ${url}`);
 
-            // 1. Generate Advanced Fingerprint
-            const fingerprint = StealthService.generateAdvancedFingerprint();
-            logger.debug(requestId, 'Generated advanced fingerprint', { profileId: fingerprint.profileId });
+            // 1. Get Browser Instance
+            browser = await browserService.getBrowser();
 
-            // 2. Initialize Browser Context with Stealth Options
-            context = await browserService.createIsolatedContext(null, {
-                fingerprint: fingerprint,
-                behavioral: 'natural',
-                deviceProfile: fingerprint.profileId
+            // 2. Generate Advanced Fingerprint
+            const DEVICE_TO_FINGERPRINT = {
+                'high-end-desktop': 'windows-chrome-high-end',
+                'mid-range-desktop': 'windows-chrome-mid-range',
+                'business-laptop': 'business-laptop',
+                'gaming-laptop': 'gaming-laptop'
+            };
+
+            let fingerprint = null;
+            if (options.enableAdvancedStealth) {
+                const profileId = DEVICE_TO_FINGERPRINT[options.deviceProfile] || 'windows-chrome-mid-range';
+                fingerprint = this.fingerprintManager.generateProfile(profileId, {
+                    behaviorProfile: options.behaviorProfile
+                });
+
+                if (options.userAgent) {
+                    fingerprint.userAgent = options.userAgent;
+                    if (fingerprint.headers) {
+                        fingerprint.headers['User-Agent'] = options.userAgent;
+                    }
+                }
+
+                logger.debug(requestId, 'Generated advanced fingerprint', { profileId: fingerprint.profileId });
+            }
+
+            // 3. Build Context Options
+            const contextOptions = this.fingerprintManager.buildContextOptions(fingerprint, {
+                userAgent: options.userAgent,
+                extraHTTPHeaders: {
+                    ...(fingerprint?.headers || {}),
+                    ...(options.headers || {})
+                },
+                viewport: fingerprint?.viewport || options.viewport || { width: 1920, height: 1080 },
+                deviceProfile: options.deviceProfile,
+                geoProfile: options.geoProfile,
+                fingerprint: fingerprint
             });
 
-            // 3. Apply Fingerprint Scripts
-            await StealthService.applyFingerprintToContext(context, fingerprint);
+            // Add cookies if provided
+            if (options.cookies && options.cookies.length > 0) {
+                contextOptions.cookies = options.cookies;
+            }
+
+            // 4. Create Isolated Context
+            context = await browserService.createIsolatedContext(browser, contextOptions);
+
+            // 5. Apply Fingerprint Scripts
+            if (fingerprint && options.enableAdvancedStealth) {
+                await this.fingerprintManager.applyFingerprint(context, fingerprint);
+            }
+
+            // Setup Google cookies if needed
+            await StealthService.setupGoogleCookies(context, url);
 
             page = await context.newPage();
 
-            // 4. Navigate with WAF Detection
-            logger.debug(requestId, 'Navigating to target URL...');
-            const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+            // Setup request interception
+            await StealthService.setupRequestInterception(page);
 
-            // 5. Check for WAF
+            // Add stealth script
+            await context.addInitScript(StealthService.getStealthScript());
+
+            // 6. Navigate with WAF Detection
+            logger.debug(requestId, 'Navigating to target URL...');
+            const response = await page.goto(url, {
+                waitUntil: 'networkidle',
+                timeout: options.timeout
+            });
+
+            // 7. Check for WAF
             const wafDetection = await this.wafBypass.detectWAF(response);
             if (wafDetection.length > 0) {
                 logger.warn(requestId, 'WAF Detected', { wafs: wafDetection.map(w => w.name) });
                 const bypassed = await this.wafBypass.applyWAFBypass(page, wafDetection);
                 if (bypassed) {
                     logger.info(requestId, 'WAF Bypass techniques applied');
-                    // Reload to apply bypass
                     await page.reload({ waitUntil: 'networkidle' });
                 }
             }
 
             // Helper for natural mouse movement
-            // We maintain state here for the session
             let mouseState = { x: 100, y: 100 };
 
             const performNaturalMove = async (targetSelector) => {
+                if (!options.simulateMouseMovement) {
+                    return page.$(targetSelector);
+                }
+
                 const element = await page.$(targetSelector);
                 if (!element) throw new Error(`Element not found: ${targetSelector}`);
 
@@ -103,14 +186,12 @@ class AuthInteractionController {
                 const path = this.mouseMovement.generateBezierPath(
                     { x: mouseState.x, y: mouseState.y },
                     { x: targetX, y: targetY },
-                    'natural'
+                    options.behaviorProfile || 'natural'
                 );
 
                 // Execute movement
                 for (const point of path) {
                     await page.mouse.move(point.x, point.y);
-                    // Optional: add tiny sleep for realism if needed, but path timestamps suggest timing
-                    // For now, we rely on Playwright's speed or just the path resolution
                 }
 
                 mouseState = { x: targetX, y: targetY };
@@ -119,7 +200,16 @@ class AuthInteractionController {
 
             // Helper for natural typing
             const performNaturalTyping = async (text) => {
-                const keystrokes = this.keyboardDynamics.calculateTypingTiming(text, fingerprint.profileId, 'normal');
+                if (!options.simulateTyping) {
+                    await page.keyboard.type(text);
+                    return;
+                }
+
+                const keystrokes = this.keyboardDynamics.calculateTypingTiming(
+                    text,
+                    fingerprint?.profileId || 'standard',
+                    'normal'
+                );
 
                 for (let i = 0; i < keystrokes.length; i++) {
                     const k = keystrokes[i];
@@ -131,31 +221,48 @@ class AuthInteractionController {
                 }
             };
 
-            // 6. Interact with Username
+            // 8. Interact with Username
             logger.debug(requestId, 'Typing username');
             const usernameInput = await performNaturalMove('#username');
-            await usernameInput.click();
-            await performNaturalTyping(username);
+            if (usernameInput) {
+                await usernameInput.click();
+                if (options.humanDelays) await page.waitForTimeout(Math.random() * 500 + 200);
+                await performNaturalTyping(username);
+            } else {
+                throw new Error('Username field (#username) not found');
+            }
 
-            // 7. Interact with Password
+            if (options.humanDelays) await page.waitForTimeout(Math.random() * 800 + 300);
+
+            // 9. Interact with Password
             logger.debug(requestId, 'Typing password');
             const passwordInput = await performNaturalMove('#password');
-            await passwordInput.click();
-            await performNaturalTyping(password);
+            if (passwordInput) {
+                await passwordInput.click();
+                if (options.humanDelays) await page.waitForTimeout(Math.random() * 500 + 200);
+                await performNaturalTyping(password);
+            } else {
+                throw new Error('Password field (#password) not found');
+            }
 
-            // 8. Click Submit Button
-            logger.debug(requestId, 'Clicking submit');
-            const submitSelector = 'button[data-litms-control-urn="login-submit"]';
-            const submitBtn = await performNaturalMove(submitSelector);
+            if (options.humanDelays) await page.waitForTimeout(Math.random() * 800 + 300);
+
+            // 10. Press Enter to Login
+            logger.debug(requestId, 'Pressing Enter to login');
 
             await Promise.all([
-                page.waitForNavigation({ timeout: 60000, waitUntil: 'networkidle' }),
-                submitBtn.click()
+                page.waitForNavigation({ timeout: options.timeout, waitUntil: 'networkidle' }),
+                page.keyboard.press('Enter')
             ]);
 
             logger.debug(requestId, 'Login submitted, navigation complete');
 
-            // 9. Post-Login Analysis
+            // Wait for extra time if configured (for dynamic content loading)
+            if (options.extraWaitTime) {
+                await page.waitForTimeout(options.extraWaitTime);
+            }
+
+            // 11. Post-Login Analysis
             const botReport = await this.antiBotService.generateReport(page);
             if (botReport.overallThreatLevel === 'critical' || botReport.overallThreatLevel === 'high') {
                 logger.warn(requestId, 'High bot detection threat detected after login', {
@@ -164,9 +271,10 @@ class AuthInteractionController {
                 });
             }
 
-            // 10. Collect Results
+            // 12. Collect Results
             const content = await page.content();
             const cookies = await context.cookies();
+            const title = await page.title();
 
             res.json({
                 success: true,
@@ -174,18 +282,35 @@ class AuthInteractionController {
                     html: content,
                     cookies: cookies,
                     url: page.url(),
+                    title: title,
                     securityAnalysis: {
                         wafDetected: wafDetection.length > 0,
                         botThreatLevel: botReport.overallThreatLevel
+                    },
+                    metadata: {
+                        deviceProfile: options.deviceProfile,
+                        geoProfile: options.geoProfile,
+                        fingerprintId: fingerprint?.id
                     }
                 }
             });
 
         } catch (error) {
             logger.error(requestId, 'Login failed', error);
+
+            // Capture screenshot on failure if possible
+            let errorScreenshot = null;
+            if (page) {
+                try {
+                    errorScreenshot = await page.screenshot({ encoding: 'base64', fullPage: true });
+                } catch (e) { /* ignore */ }
+            }
+
             res.status(500).json({
                 success: false,
                 error: error.message,
+                url: page ? page.url() : url,
+                screenshot: errorScreenshot ? `data:image/png;base64,${errorScreenshot}` : null,
                 stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
             });
         } finally {
