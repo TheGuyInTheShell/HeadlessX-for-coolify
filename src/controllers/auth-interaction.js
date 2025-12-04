@@ -262,6 +262,98 @@ class AuthInteractionController {
                 await page.waitForTimeout(options.extraWaitTime);
             }
 
+            // 10.5. reCAPTCHA Verification (if enabled)
+            if (options.verifyRecaptcha !== false) {
+                logger.debug(requestId, 'Checking for reCAPTCHA...');
+
+                const recaptchaDetected = await page.evaluate(() => {
+                    // Check for various reCAPTCHA indicators
+                    const recaptchaSelectors = [
+                        '.g-recaptcha',
+                        '#recaptcha',
+                        '[data-recaptcha]',
+                        'iframe[src*="recaptcha"]',
+                        'iframe[src*="google.com/recaptcha"]',
+                        '.recaptcha-checkbox',
+                        '#rc-imageselect'
+                    ];
+
+                    for (const selector of recaptchaSelectors) {
+                        if (document.querySelector(selector)) {
+                            return {
+                                detected: true,
+                                selector: selector,
+                                visible: true
+                            };
+                        }
+                    }
+
+                    // Check for reCAPTCHA in iframes
+                    const iframes = document.querySelectorAll('iframe');
+                    for (const iframe of iframes) {
+                        if (iframe.src && (iframe.src.includes('recaptcha') || iframe.src.includes('hcaptcha'))) {
+                            return {
+                                detected: true,
+                                selector: 'iframe',
+                                type: iframe.src.includes('hcaptcha') ? 'hCaptcha' : 'reCAPTCHA',
+                                visible: true
+                            };
+                        }
+                    }
+
+                    return { detected: false };
+                });
+
+                if (recaptchaDetected.detected) {
+                    logger.warn(requestId, `reCAPTCHA detected (${recaptchaDetected.type || 'reCAPTCHA'})`, {
+                        selector: recaptchaDetected.selector
+                    });
+
+                    // Wait for reCAPTCHA to be solved
+                    const recaptchaTimeout = options.recaptchaTimeout || 120000; // 2 minutes default
+                    const startTime = Date.now();
+
+                    logger.info(requestId, `Waiting for reCAPTCHA to be solved (timeout: ${recaptchaTimeout}ms)...`);
+
+                    try {
+                        // Wait for reCAPTCHA to disappear or for navigation
+                        await page.waitForFunction(
+                            () => {
+                                // Check if reCAPTCHA elements are gone
+                                const selectors = [
+                                    '.g-recaptcha',
+                                    '#recaptcha',
+                                    '[data-recaptcha]',
+                                    'iframe[src*="recaptcha"]',
+                                    '#rc-imageselect'
+                                ];
+
+                                const hasRecaptcha = selectors.some(sel => document.querySelector(sel));
+
+                                // Also check if we've navigated away
+                                const navigated = !window.location.href.includes('recaptcha');
+
+                                return !hasRecaptcha || navigated;
+                            },
+                            { timeout: recaptchaTimeout, polling: 1000 }
+                        );
+
+                        const solveTime = Math.round((Date.now() - startTime) / 1000);
+                        logger.info(requestId, `reCAPTCHA solved successfully (${solveTime}s)`);
+
+                        // Wait a bit more for any post-captcha redirects
+                        await page.waitForTimeout(2000);
+
+                    } catch (timeoutError) {
+                        logger.error(requestId, 'reCAPTCHA solving timeout - continuing anyway');
+                        // Don't throw error, continue with the flow
+                    }
+                } else {
+                    logger.debug(requestId, 'No reCAPTCHA detected');
+                }
+            }
+
+
             // 11. Post-Login Analysis
             const botReport = await this.antiBotService.generateReport(page);
             if (botReport.overallThreatLevel === 'critical' || botReport.overallThreatLevel === 'high') {
@@ -270,6 +362,12 @@ class AuthInteractionController {
                     detections: botReport.pageAnalysis.detected
                 });
             }
+
+            // Check for reCAPTCHA in final analysis
+            const finalRecaptchaCheck = await page.evaluate(() => {
+                const selectors = ['.g-recaptcha', '#recaptcha', 'iframe[src*="recaptcha"]'];
+                return selectors.some(sel => document.querySelector(sel));
+            });
 
             // 12. Collect Results
             const content = await page.content();
@@ -285,12 +383,15 @@ class AuthInteractionController {
                     title: title,
                     securityAnalysis: {
                         wafDetected: wafDetection.length > 0,
-                        botThreatLevel: botReport.overallThreatLevel
+                        botThreatLevel: botReport.overallThreatLevel,
+                        recaptchaDetected: botReport.pageAnalysis.detected.some(d => d.system === 'recaptcha'),
+                        recaptchaPresent: finalRecaptchaCheck
                     },
                     metadata: {
                         deviceProfile: options.deviceProfile,
                         geoProfile: options.geoProfile,
-                        fingerprintId: fingerprint?.id
+                        fingerprintId: fingerprint?.id,
+                        verifyRecaptcha: options.verifyRecaptcha !== false
                     }
                 }
             });
