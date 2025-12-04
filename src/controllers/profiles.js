@@ -344,9 +344,11 @@ class ProfilesController {
             germany: { latitude: 52.5200, longitude: 13.4050, timezone: 'Europe/Berlin' },
             france: { latitude: 48.8566, longitude: 2.3522, timezone: 'Europe/Paris' },
             canada: { latitude: 45.5017, longitude: -73.5673, timezone: 'America/Toronto' },
-            australia: { latitude: -33.8688, longitude: 151.2093, timezone: 'Australia/Sydney' }
+            australia: { latitude: -33.8688, longitude: 151.2093, timezone: 'Australia/Sydney' },
+            venezuela: { latitude: 10.4806, longitude: -66.9036, timezone: 'America/Caracas' }
         };
     }
+
 
     /**
      * Get behavioral profiles
