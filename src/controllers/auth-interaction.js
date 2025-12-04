@@ -90,7 +90,8 @@ class AuthInteractionController {
                 'high-end-desktop': 'windows-chrome-high-end',
                 'mid-range-desktop': 'windows-chrome-mid-range',
                 'business-laptop': 'business-laptop',
-                'gaming-laptop': 'gaming-laptop'
+                'gaming-laptop': 'gaming-laptop',
+                'desktop-caracas': 'desktop-caracas'
             };
 
             let fingerprint = null;
