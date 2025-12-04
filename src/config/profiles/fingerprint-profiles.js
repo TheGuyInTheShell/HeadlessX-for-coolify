@@ -171,6 +171,63 @@ const FINGERPRINT_PROFILES = {
         }
     },
 
+    'desktop-caracas': {
+        id: 'desktop-caracas',
+        name: 'Desktop Caracas Venezuela',
+        category: 'desktop',
+        platform: 'windows',
+        browser: 'chrome',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+        screen: {
+            width: 1920,
+            height: 1080,
+            availWidth: 1920,
+            availHeight: 1040,
+            colorDepth: 24,
+            pixelDepth: 24,
+            devicePixelRatio: 1
+        },
+        viewport: {
+            width: 1366,
+            height: 768
+        },
+        webgl: {
+            vendor: 'Google Inc. (NVIDIA)',
+            renderer: 'ANGLE (NVIDIA GeForce GTX 1650 Direct3D11 vs_5_0 ps_5_0)',
+            unmaskedVendor: 'NVIDIA Corporation',
+            unmaskedRenderer: 'NVIDIA GeForce GTX 1650/PCIe/SSE2',
+            extensions: ['WEBGL_debug_renderer_info', 'EXT_texture_filter_anisotropic', 'EXT_frag_depth', 'OES_texture_float']
+        },
+        hardware: {
+            cores: 4,
+            memory: 8,
+            platform: 'Win32',
+            maxTouchPoints: 0,
+            hardwareConcurrency: 4,
+            deviceMemory: 8
+        },
+        audio: {
+            sampleRate: 44100,
+            channelCount: 2,
+            baseLatency: 0.01,
+            outputLatency: 0.02
+        },
+        geolocation: {
+            timezone: 'America/Caracas',
+            language: 'es-VE',
+            languages: ['es-VE', 'es', 'en-US', 'en'],
+            locale: 'es-VE',
+            currency: 'VES',
+            latitude: 10.4806,
+            longitude: -66.9036
+        },
+        behavioral: {
+            mouseProfile: 'natural',
+            keyboardProfile: 'normal',
+            device: 'mouse'
+        }
+    },
+
     // === LAPTOP PROFILES ===
     'laptop-chrome-business': {
         id: 'laptop-chrome-business',
