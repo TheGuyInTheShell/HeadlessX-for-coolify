@@ -1,0 +1,54 @@
+Starting server...
+[SERVER ERR] ExpressSlowDownWarning: The behaviour of the 'delayMs' option was changed in express-slow-down v2:
+- For the old behavior, change the delayMs option to:
+
+  delayMs: (used, req) => {
+	  const delayAfter = req.slowDown.limit;
+	  return (used - delayAfter) * 100;
+  },
+
+- For the new behavior, change the delayMs option to:
+
+	delayMs: () => 100,
+
+Or set 'options.validate: {delayMs: false}' to disable this message. See https://express-rate-limit.github.io/WRN_ESD_DELAYMS/ for more information.
+    at slowDown (C:\Users\elies\OneDrive\Documents\Projects\JS\HeadlessX-for-coolify\node_modules\express-slow-down\dist\index.cjs:78:18)
+    at EnhancedRateLimiter.createProgressiveSlowdown (C:\Users\elies\OneDrive\Documents\Projects\JS\HeadlessX-for-coolify\src\middleware\rate-limiter.js:203:16)
+    at Object.<anonymous> (C:\Users\elies\OneDrive\Documents\Projects\JS\HeadlessX-for-coolify\src\middleware\rate-limiter.js:509:38)
+    at Module._compile (node:internal/modules/cjs/loader:1692:14)
+    at Object..js (node:internal/modules/cjs/loader:1824:10)
+    at Module.load (node:internal/modules/cjs/loader:1427:32)
+    at Module._load (node:internal/modules/cjs/loader:1250:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
+    at Module.require (node:internal/modules/cjs/loader:1449:12) {
+  code: 'WRN_ESD_DELAYMS',
+  help: 'https://express-rate-limit.github.io/WRN_ESD_DELAYMS/'
+}
+
+[SERVER ERR] ChangeWarning: The onLimitReached configuration option is deprecated and has been removed in express-rate-limit v7. See https://express-rate-limit.github.io/WRN_ERL_DEPRECATED_ON_LIMIT_REACHED/ for more information.
+    at Object.onLimitReached (C:\Users\elies\OneDrive\Documents\Projects\JS\HeadlessX-for-coolify\node_modules\express-rate-limit\dist\index.cjs:289:13)
+    at wrappedValidations.<computed> [as onLimitReached] (C:\Users\elies\OneDrive\Documents\Projects\JS\HeadlessX-for-coolify\node_modules\express-rate-limit\dist\index.cjs:397:22)
+    at parseOptions (C:\Users\elies\OneDrive\Documents\Projects\JS\HeadlessX-for-coolify\node_modules\express-rate-limit\dist\index.cjs:626:16)
+    at rateLimit (C:\Users\elies\OneDrive\Documents\Projects\JS\HeadlessX-for-coolify\node_modules\express-rate-limit\dist\index.cjs:697:18)
+    at slowDown (C:\Users\elies\OneDrive\Documents\Projects\JS\HeadlessX-for-coolify\node_modules\express-slow-down\dist\index.cjs:124:50)
+    at EnhancedRateLimiter.createProgressiveSlowdown (C:\Users\elies\OneDrive\Documents\Projects\JS\HeadlessX-for-coolify\src\middleware\rate-limiter.js:203:16)
+    at Object.<anonymous> (C:\Users\elies\OneDrive\Documents\Projects\JS\HeadlessX-for-coolify\src\middleware\rate-limiter.js:509:38)
+    at Module._compile (node:internal/modules/cjs/loader:1692:14)
+    at Object..js (node:internal/modules/cjs/loader:1824:10)
+    at Module.load (node:internal/modules/cjs/loader:1427:32) {
+  code: 'WRN_ERL_DEPRECATED_ON_LIMIT_REACHED',
+  help: 'https://express-rate-limit.github.io/WRN_ERL_DEPRECATED_ON_LIMIT_REACHED/'
+}
+
+Server is ready!
+Sending request to: http://localhost:3001/api/login?url=http%3A%2F%2Fexample.com
+[SERVER ERR] [StealthService] Failed to inject fingerprint script Profile not found: mid-range-desktop
+
+[SERVER ERR] [StealthService] Failed to inject fingerprint script Profile not found: mid-range-desktop
+
+[SERVER ERR] [2025-12-04T01:37:29.670Z] [req_1764812248589_xruv1gtdh] [ERROR] Login failed {"message":"Element not found: #username","category":"unknown","isRecoverable":false,"stack":"Error: Element not found: #username\n    at performNaturalMove (C:\\Users\\elies\\OneDrive\\Documents\\Projects\\JS\\HeadlessX-for-coolify\\src\\controllers\\auth-interaction.js:94:37)\n    at async AuthInteractionController.loginWithNaturalInteraction (C:\\Users\\elies\\OneDrive\\Documents\\Projects\\JS\\HeadlessX-for-coolify\\src\\controllers\\auth-interaction.js:136:35)"}
+
+STATUS: 500
+BODY: {"success":false,"error":"Element not found: #username","stack":"Error: Element not found: #username\n    at performNaturalMove (C:\\Users\\elies\\OneDrive\\Documents\\Projects\\JS\\HeadlessX-for-coolify\\src\\controllers\\auth-interaction.js:94:37)\n    at async AuthInteractionController.loginWithNaturalInteraction (C:\\Users\\elies\\OneDrive\\Documents\\Projects\\JS\\HeadlessX-for-coolify\\src\\controllers\\auth-interaction.js:136:35)"}
+Stopping server...

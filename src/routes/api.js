@@ -14,6 +14,7 @@ const GetController = require('../controllers/get');
 const BatchController = require('../controllers/batch');
 const ProfilesController = require('../controllers/profiles');
 const DetectionTestController = require('../controllers/detection-test');
+const AuthInteractionController = require('../controllers/auth-interaction');
 
 // Import middleware
 const { authenticate, authenticateText, addRequestId } = require('../middleware/auth');
@@ -82,5 +83,8 @@ router.get('/pdf', authenticateText, asyncHandler(RenderingController.renderPdf)
 // Batch processing
 router.post('/batch', authenticate, asyncHandler(BatchController.processBatch));
 router.get('/batch/:batchId', authenticate, asyncHandler(BatchController.getBatchStatus));
+
+// Auth interaction
+router.post('/login', authenticate, asyncHandler(AuthInteractionController.loginWithNaturalInteraction));
 
 module.exports = router;

@@ -42,8 +42,8 @@ const DEVICE_PROFILES = {
         languages: ['en-US', 'en'],
         behavioral: { profile: 'confident', mouseProfile: 'confident', typingSpeed: 'fast' }
     },
-    'mid-range-desktop': {
-        id: 'mid-range-desktop',
+    'windows-chrome-mid-range': {
+        id: 'windows-chrome-mid-range',
         screen: { width: 1920, height: 1080, devicePixelRatio: 1 },
         hardware: { cores: 4, memory: 8, gpu: 'intel-uhd' },
         timezone: 'America/Chicago',
@@ -79,9 +79,9 @@ const AUDIO_PROFILES = {
 };
 
 // Generate consistent browser fingerprint with enhanced profiles
-function generateAdvancedFingerprint(buid = crypto.randomUUID(), profileType = 'mid-range-desktop') {
+function generateAdvancedFingerprint(buid = crypto.randomUUID(), profileType = 'windows-chrome-mid-range') {
     const buidHash = crypto.createHash('sha512').update(buid).digest();
-    const profile = DEVICE_PROFILES[profileType] || DEVICE_PROFILES['mid-range-desktop'];
+    const profile = DEVICE_PROFILES[profileType] || DEVICE_PROFILES['windows-chrome-mid-range'];
     const audioProfile = AUDIO_PROFILES['windows-chrome'];
     const fingerprintId = crypto.createHash('sha256').update(`${profileType}:${buid}`).digest('hex');
 
@@ -165,7 +165,7 @@ class StealthService {
     /**
      * Generate advanced fingerprint with enhanced profiles
      */
-    static generateAdvancedFingerprint(buid = crypto.randomUUID(), profileType = 'mid-range-desktop') {
+    static generateAdvancedFingerprint(buid = crypto.randomUUID(), profileType = 'windows-chrome-mid-range') {
         return generateAdvancedFingerprint(buid, profileType);
     }
 
@@ -265,87 +265,87 @@ class StealthService {
             await page.addInitScript((fp) => {
                 // CRITICAL: Complete webdriver property removal (all possible traces)
                 ['webdriver', '__webdriver_evaluate', '__selenium_evaluate', '__webdriver_script_function',
-                 '__webdriver_script_func', '__webdriver_script_fn', '__fxdriver_evaluate', '__driver_unwrapped',
-                 '__webdriver_unwrapped', '__driver_evaluate', '__selenium_unwrapped', '__fxdriver_unwrapped'].forEach(prop => {
-                    try {
-                        delete window[prop];
-                        delete navigator[prop];
-                        delete document[prop];
-                    } catch (e) {}
-                });
-                
+                    '__webdriver_script_func', '__webdriver_script_fn', '__fxdriver_evaluate', '__driver_unwrapped',
+                    '__webdriver_unwrapped', '__driver_evaluate', '__selenium_unwrapped', '__fxdriver_unwrapped'].forEach(prop => {
+                        try {
+                            delete window[prop];
+                            delete navigator[prop];
+                            delete document[prop];
+                        } catch (e) { }
+                    });
+
                 Object.defineProperty(navigator, 'webdriver', {
                     get: () => undefined,  // Must return undefined, not false
                     configurable: false,
                     enumerable: false
                 });
-                
+
                 // Remove webdriver from constructor prototype
                 delete Navigator.prototype.webdriver;
 
                 // Remove Chrome DevTools Protocol indicators
-                ['cdc_adoQpoasnfa76pfcZLmcfl_Array', 'cdc_adoQpoasnfa76pfcZLmcfl_Promise', 
-                 'cdc_adoQpoasnfa76pfcZLmcfl_Symbol', 'cdc_adoQpoasnfa76pfcZLmcfl_JSON', 
-                 'cdc_adoQpoasnfa76pfcZLmcfl_Object', '$cdc_asdjflasutopfhvcZLmcfl_'].forEach(prop => {
-                    try { delete window[prop]; } catch (e) {}
-                });
+                ['cdc_adoQpoasnfa76pfcZLmcfl_Array', 'cdc_adoQpoasnfa76pfcZLmcfl_Promise',
+                    'cdc_adoQpoasnfa76pfcZLmcfl_Symbol', 'cdc_adoQpoasnfa76pfcZLmcfl_JSON',
+                    'cdc_adoQpoasnfa76pfcZLmcfl_Object', '$cdc_asdjflasutopfhvcZLmcfl_'].forEach(prop => {
+                        try { delete window[prop]; } catch (e) { }
+                    });
 
                 // CRITICAL: Perfect Chrome runtime object that passes all detection tests
                 const chromeRuntime = {
                     onConnect: null,
                     onMessage: null,
-                    connect: function() { 
-                        return { 
-                            postMessage: function() {}, 
-                            disconnect: function() {},
+                    connect: function () {
+                        return {
+                            postMessage: function () { },
+                            disconnect: function () { },
                             name: '',
                             sender: undefined
-                        }; 
+                        };
                     },
-                    sendMessage: function() {},
+                    sendMessage: function () { },
                     id: 'mhjfbmdgcfjbbpaeojofohoefgiehjai',
-                    getManifest: function() {
+                    getManifest: function () {
                         return {
                             name: 'Chrome PDF Viewer',
                             version: '1.0.0.0'
                         };
                     }
                 };
-                
+
                 const chromeApp = {
                     isInstalled: false,
-                    InstallState: { 
-                        DISABLED: 'disabled', 
-                        INSTALLED: 'installed', 
-                        NOT_INSTALLED: 'not_installed' 
+                    InstallState: {
+                        DISABLED: 'disabled',
+                        INSTALLED: 'installed',
+                        NOT_INSTALLED: 'not_installed'
                     },
-                    RunningState: { 
-                        CANNOT_RUN: 'cannot_run', 
-                        READY_TO_RUN: 'ready_to_run', 
-                        RUNNING: 'running' 
+                    RunningState: {
+                        CANNOT_RUN: 'cannot_run',
+                        READY_TO_RUN: 'ready_to_run',
+                        RUNNING: 'running'
                     },
-                    getDetails: function() { return null; },
-                    getIsInstalled: function() { return false; }
+                    getDetails: function () { return null; },
+                    getIsInstalled: function () { return false; }
                 };
-                
+
                 window.chrome = {
                     runtime: chromeRuntime,
                     app: chromeApp,
-                    webstore: { 
-                        onInstallStageChanged: {}, 
+                    webstore: {
+                        onInstallStageChanged: {},
                         onDownloadProgress: {},
-                        install: function(url, successCallback, failureCallback) {
+                        install: function (url, successCallback, failureCallback) {
                             if (failureCallback) failureCallback('User cancelled install');
                         }
                     },
-                    csi: function() { 
-                        return { 
+                    csi: function () {
+                        return {
                             startE: Date.now() - Math.random() * 1000,
                             onloadT: Date.now() - Math.random() * 500,
                             tran: Math.floor(Math.random() * 20) + 10
-                        }; 
+                        };
                     },
-                    loadTimes: function() {
+                    loadTimes: function () {
                         const now = Date.now() / 1000;
                         const navigationStart = now - Math.random() * 2;
                         return {
@@ -365,7 +365,7 @@ class StealthService {
                         };
                     }
                 };
-                
+
                 // Make chrome object non-configurable to prevent tampering
                 Object.defineProperty(window, 'chrome', {
                     value: window.chrome,
@@ -391,7 +391,7 @@ class StealthService {
                     0: mimeTypes[1]
                 };
                 plugins[1] = {
-                    name: 'Chrome PDF Viewer', 
+                    name: 'Chrome PDF Viewer',
                     filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai',
                     description: '',
                     length: 1,
@@ -412,7 +412,7 @@ class StealthService {
                     length: 1,
                     0: { type: 'application/x-ppapi-widevine-cdm', suffixes: '', description: 'Widevine Content Decryption Module', enabledPlugin: null }
                 };
-                
+
                 // CRITICAL: Add the 5th plugin to match expected results (WebKit built-in PDF)
                 plugins[4] = {
                     name: 'WebKit built-in PDF',
@@ -422,7 +422,7 @@ class StealthService {
                     0: mimeTypes[0],
                     1: mimeTypes[1]
                 };
-                
+
                 // Set up bi-directional references
                 mimeTypes[0].enabledPlugin = plugins[1];
                 mimeTypes[1].enabledPlugin = plugins[0];
@@ -431,30 +431,30 @@ class StealthService {
                 plugins[3][0].enabledPlugin = plugins[3];
 
                 plugins.length = 4;
-                plugins.item = function(index) { return this[index] || null; };
-                plugins.namedItem = function(name) {
+                plugins.item = function (index) { return this[index] || null; };
+                plugins.namedItem = function (name) {
                     for (let i = 0; i < this.length; i++) {
                         if (this[i] && this[i].name === name) return this[i];
                     }
                     return null;
                 };
-                plugins.refresh = function() {};
-                
+                plugins.refresh = function () { };
+
                 mimeTypes.length = 4;
-                mimeTypes.item = function(index) { return this[index] || null; };
-                mimeTypes.namedItem = function(name) {
+                mimeTypes.item = function (index) { return this[index] || null; };
+                mimeTypes.namedItem = function (name) {
                     for (let i = 0; i < this.length; i++) {
                         if (this[i] && this[i].type === name) return this[i];
                     }
                     return null;
                 };
-                
-                Object.defineProperty(navigator, 'plugins', { 
+
+                Object.defineProperty(navigator, 'plugins', {
                     get: () => plugins,
                     configurable: false,
                     enumerable: true
                 });
-                
+
                 Object.defineProperty(navigator, 'mimeTypes', {
                     get: () => mimeTypes,
                     configurable: false,
@@ -462,7 +462,7 @@ class StealthService {
                 });
 
                 // CRITICAL: Platform consistency - match user agent
-                Object.defineProperty(navigator, 'platform', { 
+                Object.defineProperty(navigator, 'platform', {
                     get: () => 'Win32',  // Force Windows to match user agent
                     configurable: false,
                     enumerable: true
@@ -476,14 +476,14 @@ class StealthService {
                 const availHeight = 1040; // Account for taskbar
                 const innerWidth = 1920;
                 const innerHeight = 969; // Browser viewport height
-                
+
                 Object.defineProperty(screen, 'width', { get: () => screenWidth, configurable: false });
                 Object.defineProperty(screen, 'height', { get: () => screenHeight, configurable: false });
                 Object.defineProperty(screen, 'availWidth', { get: () => availWidth, configurable: false });
                 Object.defineProperty(screen, 'availHeight', { get: () => availHeight, configurable: false });
                 Object.defineProperty(screen, 'colorDepth', { get: () => 24, configurable: false });
                 Object.defineProperty(screen, 'pixelDepth', { get: () => 24, configurable: false });
-                
+
                 Object.defineProperty(window, 'innerWidth', { get: () => innerWidth, configurable: false });
                 Object.defineProperty(window, 'innerHeight', { get: () => innerHeight, configurable: false });
                 Object.defineProperty(window, 'outerWidth', { get: () => innerWidth, configurable: false });
@@ -502,40 +502,40 @@ class StealthService {
                 Object.defineProperty(navigator, 'deviceMemory', { get: () => fp.deviceMemory, configurable: false });
                 Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => fp.hardwareConcurrency, configurable: false });
                 Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 0, configurable: false });
-                
+
                 // CRITICAL: Media devices with realistic count and proper structure
                 if (navigator.mediaDevices) {
                     // Override enumerateDevices to return realistic devices
                     Object.defineProperty(navigator.mediaDevices, 'enumerateDevices', {
-                        value: function() {
+                        value: function () {
                             return Promise.resolve([
-                                { 
+                                {
                                     deviceId: 'default',
-                                    kind: 'audioinput', 
+                                    kind: 'audioinput',
                                     label: 'Default - Microphone Array (Realtek(R) Audio)',
                                     groupId: 'b8f5c479a0cb77db61b2b7f8f8c8e3a14e71e15f8b89c4d26e1a12d34567890a'
                                 },
-                                { 
+                                {
                                     deviceId: 'communications',
-                                    kind: 'audioinput', 
+                                    kind: 'audioinput',
                                     label: 'Communications - Microphone Array (Realtek(R) Audio)',
                                     groupId: 'b8f5c479a0cb77db61b2b7f8f8c8e3a14e71e15f8b89c4d26e1a12d34567890a'
                                 },
-                                { 
+                                {
                                     deviceId: 'default',
-                                    kind: 'audiooutput', 
+                                    kind: 'audiooutput',
                                     label: 'Default - Speakers (Realtek(R) Audio)',
                                     groupId: 'b8f5c479a0cb77db61b2b7f8f8c8e3a14e71e15f8b89c4d26e1a12d34567890a'
                                 },
-                                { 
+                                {
                                     deviceId: 'communications',
-                                    kind: 'audiooutput', 
+                                    kind: 'audiooutput',
                                     label: 'Communications - Speakers (Realtek(R) Audio)',
                                     groupId: 'b8f5c479a0cb77db61b2b7f8f8c8e3a14e71e15f8b89c4d26e1a12d34567890a'
                                 },
-                                { 
+                                {
                                     deviceId: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2',
-                                    kind: 'videoinput', 
+                                    kind: 'videoinput',
                                     label: 'HD Pro Webcam C920 (046d:082d)',
                                     groupId: '9d2b3e4c5a8f7b6e1d4c7a9f2e5b8c1d4e7a0c3f6b9e2d5c8a1f4b7e0d3c6a9f2'
                                 }
@@ -548,22 +548,22 @@ class StealthService {
 
                 // CRITICAL: Advanced WebGL fingerprint spoofing - ensure context creation
                 const originalGetContext = HTMLCanvasElement.prototype.getContext;
-                HTMLCanvasElement.prototype.getContext = function(contextType, ...args) {
+                HTMLCanvasElement.prototype.getContext = function (contextType, ...args) {
                     // First try to get the real context
                     let context = originalGetContext.call(this, contextType, ...args);
-                    
+
                     // If WebGL context creation fails, force creation with different approach
                     if (!context && (contextType === 'webgl' || contextType === 'experimental-webgl')) {
                         // Try alternative WebGL creation methods
                         context = originalGetContext.call(this, 'experimental-webgl', ...args) ||
-                                 originalGetContext.call(this, 'webgl', ...args) ||
-                                 originalGetContext.call(this, 'moz-webgl', ...args) ||
-                                 originalGetContext.call(this, 'webkit-3d', ...args);
+                            originalGetContext.call(this, 'webgl', ...args) ||
+                            originalGetContext.call(this, 'moz-webgl', ...args) ||
+                            originalGetContext.call(this, 'webkit-3d', ...args);
                     }
 
                     if (context && (contextType === 'webgl' || contextType === 'experimental-webgl')) {
                         const originalGetParameter = context.getParameter;
-                        context.getParameter = function(parameter) {
+                        context.getParameter = function (parameter) {
                             try {
                                 // WEBGL_debug_renderer_info constants
                                 if (parameter === 37445) return fp.webgl.vendor; // UNMASKED_VENDOR_WEBGL
@@ -594,7 +594,7 @@ class StealthService {
                         // Enhanced extension spoofing with consistent extensions
                         const originalGetSupportedExtensions = context.getSupportedExtensions;
                         if (originalGetSupportedExtensions) {
-                            context.getSupportedExtensions = function() {
+                            context.getSupportedExtensions = function () {
                                 return [
                                     'ANGLE_instanced_arrays', 'EXT_blend_minmax', 'EXT_color_buffer_half_float',
                                     'EXT_frag_depth', 'EXT_shader_texture_lod', 'EXT_texture_filter_anisotropic',
@@ -617,18 +617,18 @@ class StealthService {
                 // CRITICAL: Canvas fingerprinting protection with transparent pixel fix
                 const originalToDataURL = HTMLCanvasElement.prototype.toDataURL;
                 const originalGetImageData = CanvasRenderingContext2D.prototype.getImageData;
-                
-                HTMLCanvasElement.prototype.toDataURL = function(...args) {
+
+                HTMLCanvasElement.prototype.toDataURL = function (...args) {
                     try {
                         const context = originalGetContext.call(this, '2d');
                         if (context) {
                             // Add subtle, consistent noise
                             const imageData = context.getImageData(0, 0, this.width, this.height);
                             const data = imageData.data;
-                            
+
                             // Use consistent seed based on canvas size
                             const seed = (this.width * this.height) % 1000;
-                            
+
                             for (let i = 0; i < data.length; i += 4) {
                                 const noise = ((seed + i) % 3) - 1; // -1, 0, or 1
                                 if (data[i + 3] > 0) { // Only modify non-transparent pixels
@@ -637,7 +637,7 @@ class StealthService {
                                     data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + noise)); // B
                                 }
                             }
-                            
+
                             context.putImageData(imageData, 0, 0);
                         }
                         return originalToDataURL.apply(this, args);
@@ -645,11 +645,11 @@ class StealthService {
                         return originalToDataURL.apply(this, args);
                     }
                 };
-                
+
                 // Override getImageData to return consistent transparent pixels
-                CanvasRenderingContext2D.prototype.getImageData = function(sx, sy, sw, sh) {
+                CanvasRenderingContext2D.prototype.getImageData = function (sx, sy, sw, sh) {
                     const imageData = originalGetImageData.call(this, sx, sy, sw, sh);
-                    
+
                     // Ensure transparent pixels are exactly [0,0,0,0]
                     const data = imageData.data;
                     for (let i = 0; i < data.length; i += 4) {
@@ -659,13 +659,13 @@ class StealthService {
                             data[i + 2] = 0; // B
                         }
                     }
-                    
+
                     return imageData;
                 };
 
                 // Enhanced canvas text rendering with consistent fingerprint
                 const originalFillText = CanvasRenderingContext2D.prototype.fillText;
-                CanvasRenderingContext2D.prototype.fillText = function(text, x, y, maxWidth) {
+                CanvasRenderingContext2D.prototype.fillText = function (text, x, y, maxWidth) {
                     try {
                         // Apply canvas fingerprint properties
                         this.textBaseline = fp.canvas.textBaseline;
@@ -725,7 +725,7 @@ class StealthService {
                 }
 
                 // Enhanced WebRTC blocking and spoofing
-                const mockRTCPeerConnection = function() {
+                const mockRTCPeerConnection = function () {
                     throw new Error('WebRTC is disabled for privacy');
                 };
 
@@ -793,11 +793,11 @@ class StealthService {
                         return Promise.resolve({ state });
                     };
                 }
-                
+
                 // CRITICAL: Video codec support with realistic Chrome responses
                 const videoCodecSupport = {
                     'video/mp4; codecs="avc1.42E01E"': 'probably',
-                    'video/mp4; codecs="avc1.4D401F"': 'probably', 
+                    'video/mp4; codecs="avc1.4D401F"': 'probably',
                     'video/mp4; codecs="avc1.640028"': 'probably',
                     'video/mp4; codecs="mp4v.20.8"': 'probably',
                     'video/mp4; codecs="mp4v.20.240"': 'probably',
@@ -811,7 +811,7 @@ class StealthService {
                     'video/3gpp': '',
                     'video/x-msvideo': ''
                 };
-                
+
                 const audioCodecSupport = {
                     'audio/mpeg': 'probably',
                     'audio/mp3': 'probably',
@@ -832,45 +832,45 @@ class StealthService {
 
                 if (window.HTMLVideoElement && window.HTMLVideoElement.prototype.canPlayType) {
                     const originalVideoCanPlayType = window.HTMLVideoElement.prototype.canPlayType;
-                    window.HTMLVideoElement.prototype.canPlayType = function(type) {
+                    window.HTMLVideoElement.prototype.canPlayType = function (type) {
                         const normalizedType = type.toLowerCase().trim();
-                        
+
                         // Check exact matches first
                         if (videoCodecSupport.hasOwnProperty(normalizedType)) {
                             return videoCodecSupport[normalizedType];
                         }
-                        
+
                         // Check partial matches for h264/avc1
                         if (normalizedType.includes('h264') || normalizedType.includes('avc1')) {
                             return 'probably';
                         }
-                        
+
                         // Check for mp4 container
                         if (normalizedType.includes('mp4')) {
                             return normalizedType.includes('codecs') ? 'probably' : 'maybe';
                         }
-                        
+
                         return originalVideoCanPlayType.call(this, type) || '';
                     };
                 }
-                
+
                 if (window.HTMLAudioElement && window.HTMLAudioElement.prototype.canPlayType) {
                     const originalAudioCanPlayType = window.HTMLAudioElement.prototype.canPlayType;
-                    window.HTMLAudioElement.prototype.canPlayType = function(type) {
+                    window.HTMLAudioElement.prototype.canPlayType = function (type) {
                         const normalizedType = type.toLowerCase().trim();
-                        
+
                         // Check exact matches first
                         if (audioCodecSupport.hasOwnProperty(normalizedType)) {
                             return audioCodecSupport[normalizedType];
                         }
-                        
+
                         // Check partial matches
                         for (const supportedType in audioCodecSupport) {
                             if (normalizedType.includes(supportedType.split(';')[0].replace('audio/', ''))) {
                                 return audioCodecSupport[supportedType];
                             }
                         }
-                        
+
                         return originalAudioCanPlayType.call(this, type) || '';
                     };
                 }
@@ -891,7 +891,7 @@ class StealthService {
                 // Speech synthesis spoofing for consistency
                 if (window.speechSynthesis && window.speechSynthesis.getVoices) {
                     const originalGetVoices = window.speechSynthesis.getVoices;
-                    window.speechSynthesis.getVoices = function() {
+                    window.speechSynthesis.getVoices = function () {
                         return [
                             { name: 'Microsoft David Desktop - English (United States)', lang: 'en-US', localService: true, default: true },
                             { name: 'Microsoft Zira Desktop - English (United States)', lang: 'en-US', localService: true, default: false }
@@ -900,14 +900,14 @@ class StealthService {
                 }
 
                 // CRITICAL: Fix iframe chrome access - runs after DOM ready
-                const ensureIframeChromeAccess = function() {
+                const ensureIframeChromeAccess = function () {
                     try {
                         // Override iframe creation to inject chrome object
                         const originalCreateElement = document.createElement;
-                        document.createElement = function(tagName) {
+                        document.createElement = function (tagName) {
                             const element = originalCreateElement.call(this, tagName);
                             if (tagName.toLowerCase() === 'iframe') {
-                                element.addEventListener('load', function() {
+                                element.addEventListener('load', function () {
                                     try {
                                         if (this.contentWindow && !this.contentWindow.chrome) {
                                             this.contentWindow.chrome = window.chrome;
@@ -919,7 +919,7 @@ class StealthService {
                             }
                             return element;
                         };
-                        
+
                         // Also patch existing iframes
                         const iframes = document.getElementsByTagName('iframe');
                         for (let i = 0; i < iframes.length; i++) {
@@ -935,23 +935,23 @@ class StealthService {
                         // Silently ignore errors
                     }
                 };
-                
+
                 // Run immediately and on DOM ready
                 ensureIframeChromeAccess();
                 if (document.readyState === 'loading') {
                     document.addEventListener('DOMContentLoaded', ensureIframeChromeAccess);
                 }
-                
+
                 // CRITICAL: Add getBattery with realistic response
                 if (!navigator.getBattery) {
-                    navigator.getBattery = function() {
+                    navigator.getBattery = function () {
                         return Promise.resolve({
                             charging: true,
                             chargingTime: Infinity,
                             dischargingTime: Infinity,
                             level: 1.0,
-                            addEventListener: function() {},
-                            removeEventListener: function() {}
+                            addEventListener: function () { },
+                            removeEventListener: function () { }
                         });
                     };
                 }
@@ -1078,29 +1078,29 @@ class StealthService {
                     '__webdriver_script_func', '__webdriver_script_fn', '__fxdriver_evaluate', '__driver_unwrapped',
                     '__webdriver_unwrapped', '__driver_evaluate', '__selenium_unwrapped', '__fxdriver_unwrapped',
                     'webdriver', '__webdriver_script_fn', '__webdriver_script_func'].forEach(prop => {
-                    try {
-                        delete window[prop];
-                        delete navigator[prop];
-                        delete document[prop];
-                        if (navigator.__proto__ && navigator.__proto__[prop]) {
-                            delete navigator.__proto__[prop];
-                        }
-                    } catch (e) {}
-                });
+                        try {
+                            delete window[prop];
+                            delete navigator[prop];
+                            delete document[prop];
+                            if (navigator.__proto__ && navigator.__proto__[prop]) {
+                                delete navigator.__proto__[prop];
+                            }
+                        } catch (e) { }
+                    });
 
                 // Chrome DevTools Protocol indicators
                 ['cdc_adoQpoasnfa76pfcZLmcfl_Array', 'cdc_adoQpoasnfa76pfcZLmcfl_Promise', 'cdc_adoQpoasnfa76pfcZLmcfl_Symbol',
                     'cdc_adoQpoasnfa76pfcZLmcfl_JSON', 'cdc_adoQpoasnfa76pfcZLmcfl_Object'].forEach(prop => {
-                    try {
-                        delete window[prop];
-                    } catch (e) {}
-                });
+                        try {
+                            delete window[prop];
+                        } catch (e) { }
+                    });
 
                 // Playwright indicators
                 ['__playwright', '__pw_manual', '__pw_originals', '_playwright'].forEach(prop => {
                     try {
                         delete window[prop];
-                    } catch (e) {}
+                    } catch (e) { }
                 });
 
                 // === NAVIGATOR SPOOFING ===
@@ -1127,7 +1127,7 @@ class StealthService {
                         ],
                         mobile: false,
                         platform: 'Windows',
-                        getHighEntropyValues: async(hints) => ({
+                        getHighEntropyValues: async (hints) => ({
                             architecture: 'x86',
                             bitness: '64',
                             brands: [
@@ -1212,7 +1212,7 @@ class StealthService {
                 // === PERMISSIONS API ===
                 if (navigator.permissions && navigator.permissions.query) {
                     const originalQuery = navigator.permissions.query;
-                    navigator.permissions.query = function(parameters) {
+                    navigator.permissions.query = function (parameters) {
                         return originalQuery.call(this, parameters).catch(() => Promise.resolve({ state: 'granted' }));
                     };
                 }
@@ -1221,7 +1221,7 @@ class StealthService {
                 if (location.href.includes('google.')) {
                     // Hide automation traces from Google's detection
                     const originalQuerySelector = document.querySelector;
-                    document.querySelector = function(selector) {
+                    document.querySelector = function (selector) {
                         if (typeof selector === 'string' && (selector.includes('playwright') || selector.includes('webdriver'))) {
                             return null;
                         }
@@ -1242,7 +1242,7 @@ class StealthService {
 
                     // Enterprise-like timezone handling
                     try {
-                        Intl.DateTimeFormat().resolvedOptions = function() {
+                        Intl.DateTimeFormat().resolvedOptions = function () {
                             return {
                                 locale: 'en-US',
                                 numberingSystem: 'latn',
@@ -1250,7 +1250,7 @@ class StealthService {
                                 timeZone: 'America/New_York'
                             };
                         };
-                    } catch (e) {}
+                    } catch (e) { }
 
                     // Simulate realistic interaction history for Google
                     window._mouseHistory = [];
@@ -1296,7 +1296,7 @@ class StealthService {
                     // DATACENTER BYPASS: Override geolocation for consistency
                     if (navigator.geolocation) {
                         const originalGetCurrentPosition = navigator.geolocation.getCurrentPosition;
-                        navigator.geolocation.getCurrentPosition = function(success, error, options) {
+                        navigator.geolocation.getCurrentPosition = function (success, error, options) {
                             setTimeout(() => {
                                 success({
                                     coords: {
@@ -1346,7 +1346,7 @@ class StealthService {
                 const descriptors = Object.getOwnPropertyDescriptors(Function.prototype);
                 const originalToString = descriptors.toString.value;
 
-                Function.prototype.toString = function() {
+                Function.prototype.toString = function () {
                     if (this === navigator.permissions.query) {
                         return 'function query() { [native code] }';
                     }
@@ -1448,7 +1448,7 @@ class StealthService {
 
     // Set up request interception for perfect headers
     static async setupRequestInterception(page) {
-        await page.route('**/*', async(route) => {
+        await page.route('**/*', async (route) => {
             const request = route.request();
 
             // CRITICAL: Perfect Chrome headers for Schema.org detection bypass
