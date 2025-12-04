@@ -63,7 +63,8 @@ class RenderingService {
         const DEVICE_TO_FINGERPRINT = {
             'high-end-desktop': 'windows-chrome-high-end',
             'mid-range-desktop': 'windows-chrome-mid-range',
-            'business-laptop': 'laptop-chrome-business'
+            'business-laptop': 'laptop-chrome-business',
+            'desktop-caracas': 'desktop-caracas'
         };
         let fingerprintProfile = null;
 
@@ -145,7 +146,7 @@ class RenderingService {
 
             // Enhanced navigation with Google-specific handling
             await withTimeoutFallback(
-                async() => {
+                async () => {
                     const isGoogle = url.includes('google.');
                     try {
                         if (isGoogle) {
@@ -168,26 +169,26 @@ class RenderingService {
 
                             if (/unusual traffic|automated queries|are you a robot|captcha/i.test(bodyText)) {
                                 logger.warn(requestId, 'Google anti-bot detection triggered, using enhanced evasion...');
-                                
+
                                 // Enhanced wait and retry strategy
                                 await page.waitForTimeout(15000); // Longer wait
-                                
+
                                 // Check if we can proceed anyway or need to refresh
                                 const stillBlocked = await page.evaluate(() => {
                                     return /unusual traffic|automated queries|are you a robot/i.test(document.body ? document.body.innerText : '');
                                 });
-                                
+
                                 if (stillBlocked) {
                                     // Try to refresh with a different approach
                                     logger.warn(requestId, 'Still detected, attempting page refresh...');
                                     await page.reload({ waitUntil: 'networkidle2', timeout: 45000 });
                                     await page.waitForTimeout(8000); // Wait longer after refresh
-                                    
+
                                     // If still blocked, we'll continue but may get timeout error
                                     const finalCheck = await page.evaluate(() => {
                                         return /unusual traffic|automated queries|are you a robot/i.test(document.body ? document.body.innerText : '');
                                     });
-                                    
+
                                     if (finalCheck) {
                                         logger.error(requestId, 'Google anti-bot detection persists after refresh');
                                         // Don't throw error here - let it timeout naturally
@@ -248,7 +249,7 @@ class RenderingService {
                     logger.info(requestId, 'Page loaded successfully');
                 },
                 returnPartialOnTimeout
-                    ? async() => {
+                    ? async () => {
                         wasTimeout = true;
                         logger.warn(requestId, 'Navigation timeout - trying quick reload...');
                         try {
@@ -278,7 +279,7 @@ class RenderingService {
                 }
             }
 
-            await page.evaluate(async() => {
+            await page.evaluate(async () => {
                 // Advanced stylesheet loading detection
                 await new Promise((resolve) => {
                     const checkStyleSheets = () => {
@@ -628,7 +629,7 @@ class RenderingService {
             const isTimeoutError = error.message.includes('Timeout') || error.name === 'TimeoutError';
             const isNetworkError = error.message.includes('net::ERR_FAILED') || error.message.includes('ERR_NAME_NOT_RESOLVED');
             const isAntiBot = error.message.includes('blocked') || error.message.includes('denied') ||
-                             (isTimeoutError && (url.includes('google.') || url.includes('facebook.') || url.includes('amazon.')));
+                (isTimeoutError && (url.includes('google.') || url.includes('facebook.') || url.includes('amazon.')));
 
             logger.error(requestId, `Page rendering failed: ${error.message}`);
 
@@ -801,7 +802,7 @@ class RenderingService {
             }
 
             // Wait for complete CSS and content loading
-            await page.evaluate(async() => {
+            await page.evaluate(async () => {
                 // Wait for all stylesheets to load
                 await new Promise((resolve) => {
                     const checkStyleSheets = () => {
@@ -878,7 +879,7 @@ class RenderingService {
                             document.fonts.ready,
                             new Promise(resolve => setTimeout(resolve, 5000))
                         ]);
-                    } catch (e) {}
+                    } catch (e) { }
                 }
             });
 
@@ -943,7 +944,7 @@ class RenderingService {
             await page.waitForTimeout(3000);
 
             // Wait for CSS to load completely
-            await page.evaluate(async() => {
+            await page.evaluate(async () => {
                 // Wait for all stylesheets to load
                 const stylesheets = Array.from(document.querySelectorAll('link[rel="stylesheet"]'));
                 await Promise.all(stylesheets.map(link => {

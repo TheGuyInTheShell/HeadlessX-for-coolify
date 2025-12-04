@@ -328,6 +328,17 @@ class ProfilesController {
                     mouseProfile: 'cautious',
                     typingSpeed: 'normal'
                 }
+            },
+            'desktop-caracas': {
+                name: 'Desktop Caracas',
+                viewport: { width: 1366, height: 768 },
+                screen: { width: 1366, height: 768, availWidth: 1366, availHeight: 728 },
+                hardware: { cores: 4, memory: 8192, devicePixelRatio: 1 },
+                behavioral: {
+                    profile: 'natural',
+                    mouseProfile: 'natural',
+                    typingSpeed: 'normal'
+                }
             }
         };
     }
